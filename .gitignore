@@ -1,3 +1,6 @@
 /protobufs
 */DS_Store
 .DS_Store
+**/gen
+**/target/
+**/Cargo.lock
