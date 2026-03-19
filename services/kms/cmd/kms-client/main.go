@@ -20,7 +20,7 @@ func main() {
 	cfg := config.Load()
 	addr := fmt.Sprintf("localhost:%s", cfg.GRPCPort)
 
-	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("dial: %v", err)
 	}
