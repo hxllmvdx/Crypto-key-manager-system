@@ -2,12 +2,14 @@ package handlerG
 
 import (
 	"context"
+	"errors"
 	commonv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/common/v1"
 	kmsv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/kms/v1"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gorm.io/gorm"
 )
 
 type KMSServer struct {
@@ -51,7 +53,10 @@ func (server *KMSServer) GetKey(ctx context.Context, req *kmsv1.GetKeyRequest) (
 
 	key, err := server.repo.GetKey(ctx, req.KeyId)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, status.Error(codes.NotFound, "key not found")
+		}
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	metadata := key.KeyMetadata()
@@ -67,7 +72,7 @@ func (server *KMSServer) GetKey(ctx context.Context, req *kmsv1.GetKeyRequest) (
 func (server *KMSServer) ListKeys(req *kmsv1.ListKeysRequest, stream grpc.ServerStreamingServer[kmsv1.ListKeysResponse]) error {
 	keys, err := server.repo.ListKeys(stream.Context())
 	if err != nil {
-		return err
+		return status.Error(codes.Internal, err.Error())
 	}
 
 	for _, key := range keys {
@@ -84,20 +89,12 @@ func (server *KMSServer) ListKeys(req *kmsv1.ListKeysRequest, stream grpc.Server
 }
 
 func (server *KMSServer) RotateKey(ctx context.Context, req *kmsv1.RotateKeyRequest) (*kmsv1.RotateKeyResponse, error) {
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
-	}
-
-	if req.KeyId == "" {
-		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
-	}
-
 	oldKey, err := server.repo.GetKey(ctx, req.KeyId)
 	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, status.Error(codes.NotFound, "key not found")
 		}
-		return nil, status.Error(codes.NotFound, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	keyType := oldKey.KeyType()

@@ -27,7 +27,7 @@ func (r *KeyRepo) Create(ctx context.Context, key *domain.Key) error {
 
 func (r *KeyRepo) GetByID(ctx context.Context, id string) (*domain.Key, error) {
 	var key domain.Key
-	result := r.db.WithContext(ctx).Where("id = ?", id).First(&key)
+	result := r.db.WithContext(ctx).Where("id = ?", id).Order("version DESC").First(&key)
 
 	if result.Error == gorm.ErrRecordNotFound {
 		return nil, gorm.ErrRecordNotFound

@@ -10,7 +10,7 @@ import (
 
 type Key struct {
 	ID           string `gorm:"primary_key;size:36"`
-	Version      uint32
+	Version      uint32 `gorm:"primary_key"`
 	Algorithm    string
 	EncryptedKey []byte
 	Status       string

@@ -20,6 +20,10 @@ type KeyService struct {
 	repo repository.KeyRepository
 }
 
+func NewKeyService(repo repository.KeyRepository) *KeyService {
+	return &KeyService{repo: repo}
+}
+
 func generateKeyMaterial(keyType commonv1.KeyType) ([]byte, error) {
 	var (
 		keyMaterial []byte
