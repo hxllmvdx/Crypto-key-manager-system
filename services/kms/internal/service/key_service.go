@@ -24,7 +24,7 @@ func NewKeyService(repo repository.KeyRepository) *KeyService {
 	return &KeyService{repo: repo}
 }
 
-func generateKeyMaterial(keyType commonv1.KeyType) ([]byte, error) {
+func GenerateKeyMaterial(keyType commonv1.KeyType) ([]byte, error) {
 	var (
 		keyMaterial []byte
 		err         error
@@ -55,7 +55,7 @@ func generateKeyMaterial(keyType commonv1.KeyType) ([]byte, error) {
 }
 
 func (s *KeyService) GenerateKey(ctx context.Context, keyType commonv1.KeyType) (*domain.Key, error) {
-	keyMaterial, err := generateKeyMaterial(keyType)
+	keyMaterial, err := GenerateKeyMaterial(keyType)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (s *KeyService) RotateKey(ctx context.Context, keyID string, keyType common
 		return nil, errors.New("key is destroyed")
 	}
 
-	keyMaterial, err := generateKeyMaterial(keyType)
+	keyMaterial, err := GenerateKeyMaterial(keyType)
 	if err != nil {
 		return nil, err
 	}
