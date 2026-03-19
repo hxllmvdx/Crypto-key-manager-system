@@ -20,28 +20,24 @@ type KeyService struct {
 	repo repository.KeyRepository
 }
 
-func (s *KeyService) GenerateKey(ctx context.Context, keyType commonv1.KeyType) (*domain.Key, error) {
+func generateKeyMaterial(keyType commonv1.KeyType) ([]byte, error) {
 	var (
 		keyMaterial []byte
-		algorithm   string
 		err         error
 	)
 
 	switch keyType {
 	case commonv1.KeyType_KEY_TYPE_AES_128:
-		algorithm = "AES_128"
 		keyMaterial = make([]byte, 16)
 		if _, err = rand.Read(keyMaterial); err != nil {
 			return nil, err
 		}
 	case commonv1.KeyType_KEY_TYPE_AES_256:
-		algorithm = "AES_256"
 		keyMaterial = make([]byte, 32)
 		if _, err = rand.Read(keyMaterial); err != nil {
 			return nil, err
 		}
 	case commonv1.KeyType_KEY_TYPE_RSA_2048:
-		algorithm = "RSA_2048"
 		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
 			return nil, err
@@ -51,11 +47,23 @@ func (s *KeyService) GenerateKey(ctx context.Context, keyType commonv1.KeyType) 
 		return nil, errors.New("unsupported key type")
 	}
 
+	return keyMaterial, nil
+}
+
+func (s *KeyService) GenerateKey(ctx context.Context, keyType commonv1.KeyType) (*domain.Key, error) {
+	keyMaterial, err := generateKeyMaterial(keyType)
+	if err != nil {
+		return nil, err
+	}
+
+	algorithm := domain.KeyTypeToString(keyType)
+
 	key := &domain.Key{
 		ID:           uuid.New().String(),
 		Version:      1,
 		Algorithm:    algorithm,
 		EncryptedKey: keyMaterial,
+		Status:       "ENABLED",
 		CreatedAt:    time.Now(),
 	}
 
@@ -69,4 +77,52 @@ func (s *KeyService) GetKey(ctx context.Context, id string) (*domain.Key, error)
 
 func (s *KeyService) ListKeys(ctx context.Context) ([]domain.Key, error) {
 	return s.repo.List(ctx)
+}
+
+func (s *KeyService) RotateKey(ctx context.Context, keyID string, keyType commonv1.KeyType) (*domain.Key, error) {
+	if keyID == "" {
+		return nil, errors.New("keyID is empty")
+	}
+
+	oldKey, err := s.repo.GetByID(ctx, keyID)
+	if err != nil {
+		return nil, err
+	}
+
+	if oldKey == nil {
+		return nil, errors.New("key not found")
+	}
+
+	if oldKey.KeyStatus() == commonv1.KeyStatus_KEY_STATUS_DESTROYED {
+		return nil, errors.New("key is destroyed")
+	}
+
+	keyMaterial, err := generateKeyMaterial(keyType)
+	if err != nil {
+		return nil, err
+	}
+
+	newKey := &domain.Key{
+		ID:           oldKey.ID,
+		Version:      oldKey.Version + 1,
+		Algorithm:    oldKey.Algorithm,
+		EncryptedKey: keyMaterial,
+		Status:       "ENABLED",
+		CreatedAt:    time.Now(),
+	}
+
+	oldKey.Status = "DISABLED"
+	if err := s.repo.Update(ctx, oldKey); err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.Create(ctx, newKey); err != nil {
+		return nil, err
+	}
+
+	if newKey == nil {
+		return nil, errors.New("failed to create new key")
+	}
+
+	return newKey, nil
 }
