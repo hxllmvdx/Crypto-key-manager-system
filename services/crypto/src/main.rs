@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let server = server::CryptoServer::new(Arc::new(tokio::sync::Mutex::new(client)));
 
-    let addr = format!("0.0.0.0:{}", config.service_port);
+    let addr = format!("127.0.0.1:{}", config.service_port);
     info!("Starting crypto service on {}", addr);
 
     let server = tonic::transport::Server::builder()
