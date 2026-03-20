@@ -17,6 +17,9 @@ pub enum ServiceError {
 
     #[error("gRPC error: {0}")]
     GrpcError(#[from] tonic::Status),
+
+    #[error("Unknown key type")]
+    UnknownKeyTypeError,
 }
 
 impl From<ServiceError> for Status {
@@ -35,6 +38,7 @@ impl From<ServiceError> for Status {
                 Status::internal(format!("Tonic transport error: {}", source))
             }
             ServiceError::GrpcError(source) => source,
+            ServiceError::UnknownKeyTypeError => Status::invalid_argument("Unknown key type"),
         }
     }
 }

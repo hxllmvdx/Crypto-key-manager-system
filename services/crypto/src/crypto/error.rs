@@ -1,26 +1,19 @@
-use ring::error::Unspecified;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum CryptoError {
+    #[error("Nonce validation error")]
+    NonceValidationError,
+
     #[error("Invalid key length")]
     InvalidKeyLengthError,
 
-    #[error("Encryption failed")]
-    EncryptionError,
+    #[error("Encryption failed: {0}")]
+    EncryptionError(String),
 
-    #[error("Decryption failed")]
-    DecryptionError,
+    #[error("Decryption failed: {0}")]
+    DecryptionError(String),
 
-    #[error("Unsupported algorithm")]
-    UnsupportedAlgorithmError,
-
-    #[error("Unspecified error")]
-    UnspecifiedError,
-}
-
-impl From<Unspecified> for CryptoError {
-    fn from(_: Unspecified) -> Self {
-        CryptoError::UnspecifiedError
-    }
+    #[error("PCKS1 to PrivateKey conversion failed: {0}")]
+    Pkcs1ToPrivateKeyError(String),
 }

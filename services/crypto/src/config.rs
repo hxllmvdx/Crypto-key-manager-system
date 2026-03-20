@@ -1,7 +1,8 @@
+use crate::error;
 use serde::Deserialize;
 
 fn default_kms_addr() -> String {
-    "localhost:50051".to_string()
+    "tcp://localhost:50051".to_string()
 }
 
 fn default_service_port() -> u16 {
@@ -18,8 +19,8 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_env() -> Result<Self, envy::Error> {
+    pub fn from_env() -> Result<Self, error::ServiceError> {
         dotenvy::dotenv().ok();
-        envy::from_env()
+        envy::from_env().map_err(|e| error::ServiceError::ConfigError(e))
     }
 }
