@@ -29,32 +29,33 @@ impl CryptoService for CryptoServer {
 
         let mut kms = self.kms_client.lock().await;
 
-        let key = kms
-            .get_key(&req.key.unwrap().metadata.unwrap().key_id)
-            .await?;
+        let key = kms.get_key(&req.key_id).await?;
 
         match key.metadata.unwrap().r#type() {
             KeyType::Aes128 => {
-                let ciphertext =
-                    crypto::encrypt_aes128(&key.key_material, &req.plaintext, &key.nonce_bytes)
-                        .map_err(|e| Status::internal(e.to_string()));
+                let (ciphertext, nonce_bytes) =
+                    crypto::encrypt_aes128(&key.key_material, &req.plaintext)
+                        .map_err(|e| Status::internal(e.to_string()))?;
                 Ok(Response::new(EncryptResponse {
-                    ciphertext: ciphertext?,
+                    ciphertext: ciphertext,
+                    nonce_bytes: nonce_bytes,
                 }))
             }
             KeyType::Aes256 => {
-                let ciphertext =
-                    crypto::encrypt_aes256(&key.key_material, &req.plaintext, &key.nonce_bytes)
-                        .map_err(|e| Status::internal(e.to_string()));
+                let (ciphertext, nonce_bytes) =
+                    crypto::encrypt_aes256(&key.key_material, &req.plaintext)
+                        .map_err(|e| Status::internal(e.to_string()))?;
                 Ok(Response::new(EncryptResponse {
-                    ciphertext: ciphertext?,
+                    ciphertext: ciphertext,
+                    nonce_bytes: nonce_bytes,
                 }))
             }
             KeyType::Rsa2048 => {
                 let ciphertext = crypto::encrypt_rsa2048(&key.key_material, &req.plaintext)
-                    .map_err(|e| Status::internal(e.to_string()));
+                    .map_err(|e| Status::internal(e.to_string()))?;
                 Ok(Response::new(EncryptResponse {
-                    ciphertext: ciphertext?,
+                    ciphertext: ciphertext,
+                    nonce_bytes: vec![],
                 }))
             }
             KeyType::Unspecified => return Err(Status::from(ServiceError::UnknownKeyTypeError)),
@@ -69,32 +70,30 @@ impl CryptoService for CryptoServer {
 
         let mut kms = self.kms_client.lock().await;
 
-        let key = kms
-            .get_key(&req.key.unwrap().metadata.unwrap().key_id)
-            .await?;
+        let key = kms.get_key(&req.key_id).await?;
 
         match key.metadata.unwrap().r#type() {
             KeyType::Aes128 => {
                 let plaintext =
-                    crypto::decrypt_aes128(&key.key_material, &req.ciphertext, &key.nonce_bytes)
-                        .map_err(|e| Status::internal(e.to_string()));
+                    crypto::decrypt_aes128(&key.key_material, &req.ciphertext, &req.nonce_bytes)
+                        .map_err(|e| Status::internal(e.to_string()))?;
                 Ok(Response::new(DecryptResponse {
-                    plaintext: plaintext?,
+                    plaintext: plaintext,
                 }))
             }
             KeyType::Aes256 => {
                 let plaintext =
-                    crypto::decrypt_aes256(&key.key_material, &req.ciphertext, &key.nonce_bytes)
-                        .map_err(|e| Status::internal(e.to_string()));
+                    crypto::decrypt_aes256(&key.key_material, &req.ciphertext, &req.nonce_bytes)
+                        .map_err(|e| Status::internal(e.to_string()))?;
                 Ok(Response::new(DecryptResponse {
-                    plaintext: plaintext?,
+                    plaintext: plaintext,
                 }))
             }
             KeyType::Rsa2048 => {
                 let plaintext = crypto::decrypt_rsa2048(&key.key_material, &req.ciphertext)
-                    .map_err(|e| Status::internal(e.to_string()));
+                    .map_err(|e| Status::internal(e.to_string()))?;
                 Ok(Response::new(DecryptResponse {
-                    plaintext: plaintext?,
+                    plaintext: plaintext,
                 }))
             }
             KeyType::Unspecified => return Err(Status::from(ServiceError::UnknownKeyTypeError)),
