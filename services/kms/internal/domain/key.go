@@ -15,6 +15,7 @@ type Key struct {
 	EncryptedKey []byte
 	Status       string
 	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (key Key) KeyType() commonv1.KeyType {
@@ -68,6 +69,7 @@ func (key Key) KeyMetadata() *kmsv1.KeyMetadata {
 		Version:   key.Version,
 		Type:      key.KeyType(),
 		CreatedAt: timestamppb.New(key.CreatedAt),
+		UpdatedAt: timestamppb.New(key.UpdatedAt),
 		Status:    key.KeyStatus(),
 	}
 

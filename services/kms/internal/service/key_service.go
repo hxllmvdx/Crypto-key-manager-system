@@ -69,6 +69,7 @@ func (s *KeyService) GenerateKey(ctx context.Context, keyType commonv1.KeyType) 
 		EncryptedKey: keyMaterial,
 		Status:       "ENABLED",
 		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	err = s.repo.Create(ctx, key)
@@ -112,7 +113,8 @@ func (s *KeyService) RotateKey(ctx context.Context, keyID string, keyType common
 		Algorithm:    oldKey.Algorithm,
 		EncryptedKey: keyMaterial,
 		Status:       "ENABLED",
-		CreatedAt:    time.Now(),
+		CreatedAt:    oldKey.CreatedAt,
+		UpdatedAt:    time.Now(),
 	}
 
 	oldKey.Status = "DISABLED"

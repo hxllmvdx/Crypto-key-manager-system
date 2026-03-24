@@ -71,11 +71,13 @@ func main() {
 		}
 
 		m := item.GetKeys()
-		fmt.Printf("list key_id=%s version=%d status=%s type=%s\n",
+		fmt.Printf("list key_id=%s version=%d status=%s type=%s  created_at=%s updated_at=%s\n",
 			m.GetKeyId(),
 			m.GetVersion(),
 			m.GetStatus().String(),
 			m.GetType().String(),
+			m.GetCreatedAt().AsTime().String(),
+			m.GetUpdatedAt().AsTime().String(),
 		)
 	}
 
@@ -94,9 +96,11 @@ func main() {
 		log.Fatalf("GetKey after rotate: %v", err)
 	}
 
-	fmt.Printf("after rotate got version=%d status=%s key_material_len=%d\n",
+	fmt.Printf("after rotate got version=%d status=%s key_material_len=%d created_at=%s updated_at=%s\n",
 		getResp2.GetKey().GetMetadata().GetVersion(),
 		getResp2.GetKey().GetMetadata().GetStatus().String(),
 		len(getResp2.GetKey().GetKeyMaterial()),
+		getResp2.GetKey().GetMetadata().GetCreatedAt().AsTime().String(),
+		getResp2.GetKey().GetMetadata().GetUpdatedAt().AsTime().String(),
 	)
 }
