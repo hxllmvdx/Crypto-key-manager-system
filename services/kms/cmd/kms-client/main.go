@@ -12,8 +12,6 @@ import (
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func main() {
@@ -56,7 +54,7 @@ func main() {
 		getResp.GetKey().GetMetadata().GetStatus().String(),
 	)
 
-	stream, err := client.ListKeys(ctx, &kmsv1.ListKeysRequest{Empty: &emptypb.Empty{}})
+	stream, err := client.ListKeys(ctx, &kmsv1.ListKeysRequest{})
 	if err != nil {
 		log.Fatalf("ListKeys: %v", err)
 	}
@@ -70,7 +68,7 @@ func main() {
 			log.Fatalf("ListKeys Recv: %v", err)
 		}
 
-		m := item.GetKeys()
+		m := item.GetKey()
 		fmt.Printf("list key_id=%s version=%d status=%s type=%s  created_at=%s updated_at=%s\n",
 			m.GetKeyId(),
 			m.GetVersion(),

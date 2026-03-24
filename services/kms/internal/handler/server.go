@@ -70,6 +70,9 @@ func (server *KMSServer) GetKey(ctx context.Context, req *kmsv1.GetKeyRequest) (
 }
 
 func (server *KMSServer) ListKeys(req *kmsv1.ListKeysRequest, stream grpc.ServerStreamingServer[kmsv1.ListKeysResponse]) error {
+	if req == nil {
+		return status.Error(codes.InvalidArgument, "request cannot be nil")
+	}
 	keys, err := server.repo.ListKeys(stream.Context())
 	if err != nil {
 		return status.Error(codes.Internal, err.Error())
@@ -77,7 +80,7 @@ func (server *KMSServer) ListKeys(req *kmsv1.ListKeysRequest, stream grpc.Server
 
 	for _, key := range keys {
 		response := &kmsv1.ListKeysResponse{
-			Keys: key.KeyMetadata(),
+			Key: key.KeyMetadata(),
 		}
 
 		if err := stream.Send(response); err != nil {
@@ -89,6 +92,12 @@ func (server *KMSServer) ListKeys(req *kmsv1.ListKeysRequest, stream grpc.Server
 }
 
 func (server *KMSServer) RotateKey(ctx context.Context, req *kmsv1.RotateKeyRequest) (*kmsv1.RotateKeyResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
+	}
+	if req.KeyId == "" {
+		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
+	}
 	oldKey, err := server.repo.GetKey(ctx, req.KeyId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

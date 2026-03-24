@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/domain"
+	commonv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/common/v1"
 	"gorm.io/gorm"
 )
 
@@ -11,6 +12,7 @@ type KeyRepository interface {
 	GetByID(ctx context.Context, id string) (*domain.Key, error)
 	List(ctx context.Context) ([]domain.Key, error)
 	Update(ctx context.Context, key *domain.Key) error
+	Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error
 }
 
 type KeyRepo struct {
@@ -27,7 +29,10 @@ func (r *KeyRepo) Create(ctx context.Context, key *domain.Key) error {
 
 func (r *KeyRepo) GetByID(ctx context.Context, id string) (*domain.Key, error) {
 	var key domain.Key
-	result := r.db.WithContext(ctx).Where("id = ?", id).Order("version DESC").First(&key)
+	result := r.db.WithContext(ctx).
+		Where("id = ? AND status = ?", id, commonv1.KeyStatus_KEY_STATUS_ENABLED).
+		Order("version DESC").
+		First(&key)
 
 	if result.Error == gorm.ErrRecordNotFound {
 		return nil, gorm.ErrRecordNotFound
@@ -46,5 +51,25 @@ func (r *KeyRepo) List(ctx context.Context) ([]domain.Key, error) {
 }
 
 func (r *KeyRepo) Update(ctx context.Context, key *domain.Key) error {
-	return r.db.WithContext(ctx).Model(key).Updates(key).Error
+	return r.db.WithContext(ctx).
+		Model(&domain.Key{}).
+		Where("id = ? AND version = ?", key.ID, key.Version).
+		Updates(map[string]any{
+			"status":     key.Status,
+			"updated_at": key.UpdatedAt,
+		}).Error
+}
+
+func (r *KeyRepo) Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(newKey).Error; err != nil {
+			return err
+		}
+		return tx.Model(&domain.Key{}).
+			Where("id = ? AND version = ?", oldKey.ID, oldKey.Version).
+			Updates(map[string]any{
+				"status":     oldKey.Status,
+				"updated_at": oldKey.UpdatedAt,
+			}).Error
+	})
 }
