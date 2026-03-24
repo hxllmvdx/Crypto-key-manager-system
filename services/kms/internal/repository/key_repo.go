@@ -2,8 +2,11 @@ package repository
 
 import (
 	"context"
-	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/domain"
+	"errors"
+	"fmt"
 	commonv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/common/v1"
+	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/domain"
+	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/kmserrors"
 	"gorm.io/gorm"
 )
 
@@ -34,10 +37,10 @@ func (r *KeyRepo) GetByID(ctx context.Context, id string) (*domain.Key, error) {
 		Order("version DESC").
 		First(&key)
 
-	if result.Error == gorm.ErrRecordNotFound {
-		return nil, gorm.ErrRecordNotFound
-	}
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("get key: %w", kmserrors.ErrNotFound)
+		}
 		return nil, result.Error
 	}
 
