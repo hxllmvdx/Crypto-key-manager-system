@@ -20,6 +20,9 @@ sha2 = "0.10.9"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
+[dev-dependencies]
+tokio-stream = "0.1.18"
+mockall = "0.14.0"
 
 [build-dependencies]
 tonic-prost-build = "0.14.5"
