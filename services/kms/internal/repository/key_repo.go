@@ -8,6 +8,7 @@ import (
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/domain"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/kmserrors"
 	"gorm.io/gorm"
+	"time"
 )
 
 type KeyRepository interface {
@@ -16,6 +17,7 @@ type KeyRepository interface {
 	List(ctx context.Context) ([]domain.Key, error)
 	Update(ctx context.Context, key *domain.Key) error
 	Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error
+	ListEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error)
 }
 
 type KeyRepo struct {
@@ -75,4 +77,14 @@ func (r *KeyRepo) Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain
 				"updated_at": oldKey.UpdatedAt,
 			}).Error
 	})
+
+}
+
+func (r *KeyRepo) ListEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error) {
+	var keys []domain.Key
+	err := r.db.WithContext(ctx).
+		Where("status = ? AND updated_at <= ?", commonv1.KeyStatus_KEY_STATUS_ENABLED, timeNow.AddDate(0, -1, 0)).
+		Find(&keys).
+		Error
+	return keys, err
 }

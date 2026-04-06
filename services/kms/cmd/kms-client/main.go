@@ -22,7 +22,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("dial: %v", err)
 	}
-	defer conn.Close()
+	defer func(conn *grpc.ClientConn) {
+		err := conn.Close()
+		if err != nil {
+			log.Printf("close connection: %v", err)
+		}
+	}(conn)
 
 	client := kmsv1.NewKMSServiceClient(conn)
 
@@ -44,6 +49,8 @@ func main() {
 		genResp.GetMetadata().GetType().String(),
 	)
 
+	fmt.Println()
+
 	getResp, err := client.GetKey(ctx, &kmsv1.GetKeyRequest{KeyId: keyID})
 	if err != nil {
 		log.Fatalf("GetKey: %v", err)
@@ -53,6 +60,8 @@ func main() {
 		getResp.GetKey().GetMetadata().GetVersion(),
 		getResp.GetKey().GetMetadata().GetStatus().String(),
 	)
+
+	fmt.Println()
 
 	stream, err := client.ListKeys(ctx, &kmsv1.ListKeysRequest{})
 	if err != nil {
@@ -69,7 +78,7 @@ func main() {
 		}
 
 		m := item.GetKey()
-		fmt.Printf("list key_id=%s version=%d status=%s type=%s  created_at=%s updated_at=%s\n",
+		fmt.Printf("list key_id=%s version=%d status=%s type=%s created_at=%s updated_at=%s\n",
 			m.GetKeyId(),
 			m.GetVersion(),
 			m.GetStatus().String(),
@@ -78,6 +87,8 @@ func main() {
 			m.GetUpdatedAt().AsTime().String(),
 		)
 	}
+
+	fmt.Println()
 
 	rotResp, err := client.RotateKey(ctx, &kmsv1.RotateKeyRequest{KeyId: keyID})
 	if err != nil {
@@ -88,6 +99,8 @@ func main() {
 		rotResp.GetMetadata().GetVersion(),
 		rotResp.GetMetadata().GetStatus().String(),
 	)
+
+	fmt.Println()
 
 	getResp2, err := client.GetKey(ctx, &kmsv1.GetKeyRequest{KeyId: keyID})
 	if err != nil {
@@ -101,4 +114,33 @@ func main() {
 		getResp2.GetKey().GetMetadata().GetCreatedAt().AsTime().String(),
 		getResp2.GetKey().GetMetadata().GetUpdatedAt().AsTime().String(),
 	)
+
+	fmt.Println()
+
+	stream2, err := client.RotateEnabledKeysThatExpired(ctx, &kmsv1.RotateEnabledKeysThatExpiredRequest{})
+	if err != nil {
+		log.Fatalf("RotateEnabledKeysThatExpired: %v", err)
+	}
+
+	for {
+		item, err := stream2.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("RotateEnabledKeysThatExpired Recv: %v", err)
+		}
+
+		m := item.GetKey()
+		fmt.Printf("rotateEnabled key_id=%s version=%d status=%s type=%s created_at=%s updated_at=%s\n",
+			m.GetKeyId(),
+			m.GetVersion(),
+			m.GetStatus().String(),
+			m.GetType().String(),
+			m.GetCreatedAt().AsTime().String(),
+			m.GetUpdatedAt().AsTime().String(),
+		)
+	}
+
+	fmt.Println()
 }

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net"
+	"time"
 
 	kmsv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/kms/v1"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/config"
@@ -19,6 +22,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("db init: %v", err)
 	}
+	fmt.Println("db initialized")
 
 	keyRepo := repository.NewKeyRepository(db)
 	keyService := service.NewKeyService(keyRepo)
@@ -30,6 +34,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("listen: %v", err)
 	}
+	fmt.Println("gRPC server listening on " + cfg.GRPCPort)
+
+	ticker := time.NewTicker(time.Hour)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println("check for rotation")
+				if _, err := keyService.RotateEnabledKeysThatExpired(context.Background(), time.Now()); err != nil {
+					log.Fatalf("rotateExpiredKeys: %v", err)
+				}
+			}
+		}
+	}()
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("serve: %v", err)
