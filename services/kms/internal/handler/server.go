@@ -67,6 +67,7 @@ func (server *KMSServer) ListKeys(req *kmsv1.ListKeysRequest, stream grpc.Server
 	if req == nil {
 		return status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
+
 	keys, err := server.repo.ListKeys(stream.Context())
 	if err != nil {
 		return errorToGRPCError(err)
@@ -105,6 +106,7 @@ func (server *KMSServer) RotateEnabledKeysThatExpired(req *kmsv1.RotateEnabledKe
 	if req == nil {
 		return status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
+
 	keys, err := server.repo.RotateEnabledKeysThatExpired(stream.Context(), time.Now().UTC())
 	if err != nil {
 		return errorToGRPCError(err)
