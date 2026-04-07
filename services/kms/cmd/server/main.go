@@ -1,8 +1,15 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 
 	kmsv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/kms/v1"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/config"
@@ -19,6 +26,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("db init: %v", err)
 	}
+	fmt.Println("db initialized")
 
 	keyRepo := repository.NewKeyRepository(db)
 	keyService := service.NewKeyService(keyRepo)
@@ -30,8 +38,55 @@ func main() {
 	if err != nil {
 		log.Fatalf("listen: %v", err)
 	}
+	fmt.Println("gRPC server listening on " + cfg.GRPCPort)
 
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("serve: %v", err)
-	}
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				fmt.Println("gRPC server stopped by context done")
+				return
+			case <-ticker.C:
+				fmt.Println("check for rotation")
+
+				opCtx, cancel := context.WithTimeout(ctx, time.Second*10)
+
+				if _, err := keyService.RotateEnabledKeysThatExpired(opCtx, time.Now()); err != nil {
+					log.Printf("rotateExpiredKeys: %v", err)
+				}
+				cancel()
+			}
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		if err := grpcServer.Serve(lis); err != nil && err != grpc.ErrServerStopped {
+			log.Fatalf("serve: %v", err)
+		}
+	}()
+
+	<-quit
+
+	fmt.Println("start shutdown")
+	grpcServer.GracefulStop()
+
+	stop()
+
+	wg.Wait()
+
+	fmt.Println("successful shutdown")
 }

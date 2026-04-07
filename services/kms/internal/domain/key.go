@@ -13,8 +13,9 @@ type Key struct {
 	Version      uint32 `gorm:"primary_key"`
 	Algorithm    string
 	EncryptedKey []byte
-	Status       string
+	Status       commonv1.KeyStatus `gorm:"type:int"`
 	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (key Key) KeyType() commonv1.KeyType {
@@ -43,24 +44,7 @@ func KeyTypeToString(keyType commonv1.KeyType) string {
 	}
 }
 
-func (key Key) KeyStatus() commonv1.KeyStatus {
-	switch key.Status {
-	case "ENABLED":
-		return commonv1.KeyStatus_KEY_STATUS_ENABLED
-	case "DISABLED":
-		return commonv1.KeyStatus_KEY_STATUS_DISABLED
-	case "PENDING_ROTATION":
-		return commonv1.KeyStatus_KEY_STATUS_PENDING_ROTATION
-	case "PENDING_DEACTIVATION":
-		return commonv1.KeyStatus_KEY_STATUS_PENDING_DEACTIVATION
-	case "DESTROYED":
-		return commonv1.KeyStatus_KEY_STATUS_DESTROYED
-	case "EXPIRED":
-		return commonv1.KeyStatus_KEY_STATUS_EXPIRED
-	default:
-		return commonv1.KeyStatus_KEY_STATUS_UNSPECIFIED
-	}
-}
+func (key Key) KeyStatus() commonv1.KeyStatus { return key.Status }
 
 func (key Key) KeyMetadata() *kmsv1.KeyMetadata {
 	metadata := &kmsv1.KeyMetadata{
@@ -68,7 +52,8 @@ func (key Key) KeyMetadata() *kmsv1.KeyMetadata {
 		Version:   key.Version,
 		Type:      key.KeyType(),
 		CreatedAt: timestamppb.New(key.CreatedAt),
-		Status:    key.KeyStatus(),
+		UpdatedAt: timestamppb.New(key.UpdatedAt),
+		Status:    key.Status,
 	}
 
 	return metadata
