@@ -22,10 +22,8 @@ type KeyService struct {
 	repo repository.KeyRepository
 }
 
-func isExpired(updatedAt, now time.Time) bool {
-	expiryAt := updatedAt.AddDate(0, 1, 0) // 1 month expiration-period
-
-	return !now.Before(expiryAt)
+func isExpired(expiryAt, now time.Time) bool {
+	return !expiryAt.After(now)
 }
 
 func isKeyRotatable(key *domain.Key, allowedStatusesForRotation map[commonv1.KeyStatus]struct{}) error {
@@ -100,6 +98,8 @@ func (s *KeyService) rotateOldKey(
 		Status:       commonv1.KeyStatus_KEY_STATUS_ENABLED,
 		CreatedAt:    oldKey.CreatedAt,
 		UpdatedAt:    timeNow,
+		ExpiryAt:     timeNow.AddDate(0, 1, 0),
+		DisabledAt:   oldKey.DisabledAt,
 	}
 
 	oldKey.Status = statusForOldKeyAfterRotation
@@ -136,6 +136,8 @@ func (s *KeyService) GenerateKey(ctx context.Context, keyType commonv1.KeyType, 
 		Status:       commonv1.KeyStatus_KEY_STATUS_ENABLED,
 		CreatedAt:    timeNow,
 		UpdatedAt:    timeNow,
+		ExpiryAt:     timeNow.AddDate(0, 1, 0),
+		DisabledAt:   time.Time{},
 	}
 
 	err = s.repo.Create(ctx, key)
@@ -152,7 +154,7 @@ func (s *KeyService) GetKeyOrRotateIfExpired(ctx context.Context, keyID string, 
 		return nil, err
 	}
 
-	if !isExpired(key.UpdatedAt, timeNow) {
+	if !isExpired(key.ExpiryAt, timeNow) {
 		return key, nil
 	}
 
@@ -193,7 +195,7 @@ func (s *KeyService) RotateKey(ctx context.Context, keyID string, timeNow time.T
 	return s.rotateOldKey(
 		ctx,
 		oldKey,
-		commonv1.KeyStatus_KEY_STATUS_DISABLED,
+		commonv1.KeyStatus_KEY_STATUS_ROTATED,
 		allowedStatusesForRotation,
 		timeNow,
 	)
@@ -227,4 +229,43 @@ func (s *KeyService) RotateEnabledKeysThatExpired(ctx context.Context, timeNow t
 	}
 
 	return newKeys, nil
+}
+
+func (s *KeyService) DisableKey(ctx context.Context, keyID string, timeNow time.Time) error {
+	if keyID == "" {
+		return fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
+	}
+
+	err := s.repo.Disable(ctx, keyID, timeNow)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *KeyService) DestroyKey(ctx context.Context, keyID string) error {
+	if keyID == "" {
+		return fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
+	}
+
+	err := s.repo.Destroy(ctx, keyID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *KeyService) RestoreKey(ctx context.Context, keyID string) error {
+	if keyID == "" {
+		return fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
+	}
+
+	err := s.repo.Restore(ctx, keyID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

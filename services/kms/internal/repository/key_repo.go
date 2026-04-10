@@ -15,9 +15,11 @@ type KeyRepository interface {
 	Create(ctx context.Context, key *domain.Key) error
 	GetByID(ctx context.Context, id string) (*domain.Key, error)
 	List(ctx context.Context) ([]domain.Key, error)
-	Update(ctx context.Context, key *domain.Key) error
 	Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error
 	ListEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error)
+	Disable(ctx context.Context, id string, timeNow time.Time) error
+	Destroy(ctx context.Context, id string) error
+	Restore(ctx context.Context, id string) error
 }
 
 type KeyRepo struct {
@@ -55,16 +57,6 @@ func (r *KeyRepo) List(ctx context.Context) ([]domain.Key, error) {
 	return keys, err
 }
 
-func (r *KeyRepo) Update(ctx context.Context, key *domain.Key) error {
-	return r.db.WithContext(ctx).
-		Model(&domain.Key{}).
-		Where("id = ? AND version = ?", key.ID, key.Version).
-		Updates(map[string]any{
-			"status":     key.Status,
-			"updated_at": key.UpdatedAt,
-		}).Error
-}
-
 func (r *KeyRepo) Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(newKey).Error; err != nil {
@@ -77,14 +69,37 @@ func (r *KeyRepo) Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain
 				"updated_at": oldKey.UpdatedAt,
 			}).Error
 	})
-
 }
 
 func (r *KeyRepo) ListEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error) {
 	var keys []domain.Key
 	err := r.db.WithContext(ctx).
-		Where("status = ? AND updated_at <= ?", commonv1.KeyStatus_KEY_STATUS_ENABLED, timeNow.AddDate(0, -1, 0)).
+		Where("status = ? AND expiry_at <= ?", commonv1.KeyStatus_KEY_STATUS_ENABLED, timeNow).
 		Find(&keys).
 		Error
 	return keys, err
+}
+
+func (r *KeyRepo) Disable(ctx context.Context, id string, timeNow time.Time) error {
+	return r.db.WithContext(ctx).
+		Where("id = ?", id).
+		Updates(map[string]any{
+			"disabled_at": timeNow,
+		}).
+		Error
+}
+
+func (r *KeyRepo) Destroy(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).
+		Delete(&domain.Key{}, "id = ?", id).
+		Error
+}
+
+func (r *KeyRepo) Restore(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).
+		Where("id = ?", id).
+		Updates(map[string]any{
+			"disabled_at": nil,
+		}).
+		Error
 }

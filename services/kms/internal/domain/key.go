@@ -16,6 +16,8 @@ type Key struct {
 	Status       commonv1.KeyStatus `gorm:"type:int"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	ExpiryAt     time.Time
+	DisabledAt   time.Time
 }
 
 func (key Key) KeyType() commonv1.KeyType {
