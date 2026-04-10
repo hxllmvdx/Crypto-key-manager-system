@@ -15,7 +15,6 @@ type KeyRepository interface {
 	Create(ctx context.Context, key *domain.Key) error
 	GetByID(ctx context.Context, id string) (*domain.Key, error)
 	List(ctx context.Context) ([]domain.Key, error)
-	Update(ctx context.Context, key *domain.Key) error
 	Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error
 	ListEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error)
 	Disable(ctx context.Context, id string, timeNow time.Time) error
@@ -56,16 +55,6 @@ func (r *KeyRepo) List(ctx context.Context) ([]domain.Key, error) {
 	var keys []domain.Key
 	err := r.db.WithContext(ctx).Find(&keys).Error
 	return keys, err
-}
-
-func (r *KeyRepo) Update(ctx context.Context, key *domain.Key) error {
-	return r.db.WithContext(ctx).
-		Model(&domain.Key{}).
-		Where("id = ? AND version = ?", key.ID, key.Version).
-		Updates(map[string]any{
-			"status":     key.Status,
-			"updated_at": key.UpdatedAt,
-		}).Error
 }
 
 func (r *KeyRepo) Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error {

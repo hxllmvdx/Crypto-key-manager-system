@@ -195,7 +195,7 @@ func (s *KeyService) RotateKey(ctx context.Context, keyID string, timeNow time.T
 	return s.rotateOldKey(
 		ctx,
 		oldKey,
-		commonv1.KeyStatus_KEY_STATUS_DISABLED,
+		commonv1.KeyStatus_KEY_STATUS_ROTATED,
 		allowedStatusesForRotation,
 		timeNow,
 	)
