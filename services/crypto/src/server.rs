@@ -1,6 +1,6 @@
 use crate::crypto;
 use crate::error::ServiceError;
-use crate::kms_client::KMSClient;
+use crate::kms_client::KMSClientTrait;
 use crate::proto::common::v1::KeyType;
 use crate::proto::crypto::v1::{
     DecryptRequest, DecryptResponse, EncryptRequest, EncryptResponse, SignRequest, SignResponse,
@@ -10,11 +10,11 @@ use std::sync::Arc;
 use tonic::{Request, Response, Status, async_trait};
 
 pub struct CryptoServer {
-    kms_client: Arc<tokio::sync::Mutex<KMSClient>>,
+    kms_client: Arc<tokio::sync::Mutex<dyn KMSClientTrait>>,
 }
 
 impl CryptoServer {
-    pub fn new(kms_client: Arc<tokio::sync::Mutex<KMSClient>>) -> Self {
+    pub fn new(kms_client: Arc<tokio::sync::Mutex<dyn KMSClientTrait>>) -> Self {
         Self { kms_client }
     }
 }
