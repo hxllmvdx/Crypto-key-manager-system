@@ -18,9 +18,9 @@ type KeyRepository interface {
 	Update(ctx context.Context, key *domain.Key) error
 	Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error
 	ListEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error)
-	Disable(ctx context.Context, key *domain.Key, timeNow time.Time) error
-	Destroy(ctx context.Context, key *domain.Key) error
-	Restore(ctx context.Context, key *domain.Key) error
+	Disable(ctx context.Context, id string, timeNow time.Time) error
+	Destroy(ctx context.Context, id string) error
+	Restore(ctx context.Context, id string) error
 }
 
 type KeyRepo struct {
@@ -91,24 +91,24 @@ func (r *KeyRepo) ListEnabledKeysThatExpired(ctx context.Context, timeNow time.T
 	return keys, err
 }
 
-func (r *KeyRepo) Disable(ctx context.Context, key *domain.Key, timeNow time.Time) error {
+func (r *KeyRepo) Disable(ctx context.Context, id string, timeNow time.Time) error {
 	return r.db.WithContext(ctx).
-		Where("id = ?", key.ID).
+		Where("id = ?", id).
 		Updates(map[string]any{
 			"disabled_at": timeNow,
 		}).
 		Error
 }
 
-func (r *KeyRepo) Destroy(ctx context.Context, key *domain.Key) error {
+func (r *KeyRepo) Destroy(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).
-		Delete(&domain.Key{}, "id = ?", key.ID).
+		Delete(&domain.Key{}, "id = ?", id).
 		Error
 }
 
-func (r *KeyRepo) Restore(ctx context.Context, key *domain.Key) error {
+func (r *KeyRepo) Restore(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).
-		Where("id = ?", key.ID).
+		Where("id = ?", id).
 		Updates(map[string]any{
 			"disabled_at": nil,
 		}).
