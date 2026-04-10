@@ -43,14 +43,14 @@ func main() {
 	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
 
+	var wg sync.WaitGroup
+
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
-		ticker := time.NewTicker(time.Hour)
-		defer ticker.Stop()
 
 		for {
 			select {
@@ -61,11 +61,33 @@ func main() {
 				fmt.Println("check for rotation")
 
 				opCtx, cancel := context.WithTimeout(ctx, time.Second*10)
+				defer cancel()
 
-				if _, err := keyService.RotateEnabledKeysThatExpired(opCtx, time.Now()); err != nil {
+				if err := keyService.RotateEnabledKeysThatExpired(opCtx, time.Now()); err != nil {
 					log.Printf("rotateExpiredKeys: %v", err)
 				}
-				cancel()
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case <-ctx.Done():
+				fmt.Println("gRPC server stopped by context done")
+				return
+			case <-ticker.C:
+				fmt.Println("check for deletion")
+
+				opCtx, cancel := context.WithTimeout(ctx, time.Second*10)
+				defer cancel()
+
+				if err := keyService.DestroyOldDisabledKeys(opCtx, time.Now()); err != nil {
+					log.Printf("destroyOldDisabledKeys: %v", err)
+				}
 			}
 		}
 	}()
