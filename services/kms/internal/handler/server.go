@@ -102,29 +102,6 @@ func (server *KMSServer) RotateKey(ctx context.Context, req *kmsv1.RotateKeyRequ
 	return &kmsv1.RotateKeyResponse{Metadata: key.KeyMetadata()}, nil
 }
 
-func (server *KMSServer) RotateEnabledKeysThatExpired(req *kmsv1.RotateEnabledKeysThatExpiredRequest, stream grpc.ServerStreamingServer[kmsv1.RotateEnabledKeysThatExpiredResponse]) error {
-	if req == nil {
-		return status.Error(codes.InvalidArgument, "request cannot be nil")
-	}
-
-	keys, err := server.repo.RotateEnabledKeysThatExpired(stream.Context(), time.Now().UTC())
-	if err != nil {
-		return errorToGRPCError(err)
-	}
-
-	for _, key := range keys {
-		response := &kmsv1.RotateEnabledKeysThatExpiredResponse{
-			Key: key.KeyMetadata(),
-		}
-
-		if err := stream.Send(response); err != nil {
-			return errorToGRPCError(err)
-		}
-	}
-
-	return nil
-}
-
 func (server *KMSServer) DisableKey(ctx context.Context, req *kmsv1.DisableKeyRequest) (*kmsv1.DisableKeyResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")

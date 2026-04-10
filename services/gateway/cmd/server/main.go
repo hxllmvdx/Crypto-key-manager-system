@@ -4,10 +4,12 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/client"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/config"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/middleware"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/repository"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/routes"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -20,6 +22,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("db init: %v", err)
 	}
+
+	cryptoConn, err := grpc.NewClient(cfg.CryptoAddr)
+	if err != nil {
+		log.Fatalf("crypto client init: %v", err)
+	}
+	defer cryptoConn.Close()
+
+	cryptoClient := client.NewCryptoClient(cryptoConn, 10)
 
 	router := gin.Default()
 

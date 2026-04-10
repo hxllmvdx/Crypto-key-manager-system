@@ -116,31 +116,4 @@ func main() {
 	)
 
 	fmt.Println()
-
-	stream2, err := client.RotateEnabledKeysThatExpired(ctx, &kmsv1.RotateEnabledKeysThatExpiredRequest{})
-	if err != nil {
-		log.Fatalf("RotateEnabledKeysThatExpired: %v", err)
-	}
-
-	for {
-		item, err := stream2.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("RotateEnabledKeysThatExpired Recv: %v", err)
-		}
-
-		m := item.GetKey()
-		fmt.Printf("rotateEnabled key_id=%s version=%d status=%s type=%s created_at=%s updated_at=%s\n",
-			m.GetKeyId(),
-			m.GetVersion(),
-			m.GetStatus().String(),
-			m.GetType().String(),
-			m.GetCreatedAt().AsTime().String(),
-			m.GetUpdatedAt().AsTime().String(),
-		)
-	}
-
-	fmt.Println()
 }

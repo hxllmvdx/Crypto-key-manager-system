@@ -201,19 +201,18 @@ func (s *KeyService) RotateKey(ctx context.Context, keyID string, timeNow time.T
 	)
 }
 
-func (s *KeyService) RotateEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error) {
-	keys, err := s.repo.ListEnabledKeysThatExpired(ctx, timeNow)
+func (s *KeyService) RotateEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) error {
+	keys, err := s.repo.ListEnabledThatExpired(ctx, timeNow)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	allowedStatusesForRotation := map[commonv1.KeyStatus]struct{}{
 		commonv1.KeyStatus_KEY_STATUS_ENABLED: {},
 	}
 
-	newKeys := make([]domain.Key, 0, len(keys))
 	for _, key := range keys {
-		newKey, err := s.rotateOldKey(
+		_, err := s.rotateOldKey(
 			ctx,
 			&key,
 			commonv1.KeyStatus_KEY_STATUS_EXPIRED,
@@ -222,13 +221,20 @@ func (s *KeyService) RotateEnabledKeysThatExpired(ctx context.Context, timeNow t
 		)
 
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		newKeys = append(newKeys, *newKey)
 	}
 
-	return newKeys, nil
+	return nil
+}
+
+func (s *KeyService) DestroyOldDisabledKeys(ctx context.Context, timeNow time.Time) error {
+	err := s.repo.DeleteOldDisabled(ctx, timeNow)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *KeyService) DisableKey(ctx context.Context, keyID string, timeNow time.Time) error {

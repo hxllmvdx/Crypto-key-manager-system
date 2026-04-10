@@ -16,10 +16,11 @@ type KeyRepository interface {
 	GetByID(ctx context.Context, id string) (*domain.Key, error)
 	List(ctx context.Context) ([]domain.Key, error)
 	Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error
-	ListEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error)
+	ListEnabledThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error)
 	Disable(ctx context.Context, id string, timeNow time.Time) error
 	Destroy(ctx context.Context, id string) error
 	Restore(ctx context.Context, id string) error
+	DeleteOldDisabled(ctx context.Context, timeNow time.Time) error
 }
 
 type KeyRepo struct {
@@ -71,7 +72,7 @@ func (r *KeyRepo) Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain
 	})
 }
 
-func (r *KeyRepo) ListEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error) {
+func (r *KeyRepo) ListEnabledThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error) {
 	var keys []domain.Key
 	err := r.db.WithContext(ctx).
 		Where("status = ? AND expiry_at <= ?", commonv1.KeyStatus_KEY_STATUS_ENABLED, timeNow).
@@ -101,5 +102,13 @@ func (r *KeyRepo) Restore(ctx context.Context, id string) error {
 		Updates(map[string]any{
 			"disabled_at": nil,
 		}).
+		Error
+}
+
+func (r *KeyRepo) DeleteOldDisabled(ctx context.Context, timeNow time.Time) error {
+	return r.db.WithContext(ctx).
+		Delete(&domain.Key{}, "status = ? AND deleted_at is not NULL AND deleted_at >= ?",
+			commonv1.KeyStatus_KEY_STATUS_DISABLED,
+			timeNow.AddDate(0, -1, 0)).
 		Error
 }
