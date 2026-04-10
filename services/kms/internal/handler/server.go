@@ -124,3 +124,51 @@ func (server *KMSServer) RotateEnabledKeysThatExpired(req *kmsv1.RotateEnabledKe
 
 	return nil
 }
+
+func (server *KMSServer) DisableKey(ctx context.Context, req *kmsv1.DisableKeyRequest) (*kmsv1.DisableKeyResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
+	}
+	if req.KeyId == "" {
+		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
+	}
+
+	err := server.repo.DisableKey(ctx, req.KeyId, time.Now().UTC())
+	if err != nil {
+		return nil, errorToGRPCError(err)
+	}
+
+	return &kmsv1.DisableKeyResponse{}, nil
+}
+
+func (server *KMSServer) DestroyKey(ctx context.Context, req *kmsv1.DestroyKeyRequest) (*kmsv1.DestroyKeyResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
+	}
+	if req.KeyId == "" {
+		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
+	}
+
+	err := server.repo.DestroyKey(ctx, req.KeyId)
+	if err != nil {
+		return nil, errorToGRPCError(err)
+	}
+
+	return &kmsv1.DestroyKeyResponse{}, nil
+}
+
+func (server *KMSServer) RestoreKey(ctx context.Context, req *kmsv1.RestoreKeyRequest) (*kmsv1.RestoreKeyResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
+	}
+	if req.KeyId == "" {
+		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
+	}
+
+	err := server.repo.RestoreKey(ctx, req.KeyId)
+	if err != nil {
+		return nil, errorToGRPCError(err)
+	}
+
+	return &kmsv1.RestoreKeyResponse{}, nil
+}
