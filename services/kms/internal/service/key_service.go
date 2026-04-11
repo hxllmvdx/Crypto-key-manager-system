@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/kmserrors"
 	"time"
 
+	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/kmserrors"
+
+	"github.com/hxllmvdx/Crypto-key-management-system/pkg/domain"
 	commonv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/common/v1"
-	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/domain"
+
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/repository"
 
 	"crypto/rand"

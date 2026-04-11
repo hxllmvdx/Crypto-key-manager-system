@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/hxllmvdx/Crypto-key-management-system/pkg/domain"
 	commonv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/common/v1"
-	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/domain"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/kmserrors"
 	"gorm.io/gorm"
-	"time"
 )
 
 type KeyRepository interface {

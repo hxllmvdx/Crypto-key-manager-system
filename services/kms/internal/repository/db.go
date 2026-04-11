@@ -3,8 +3,8 @@ package repository
 import (
 	"fmt"
 
+	"github.com/hxllmvdx/Crypto-key-management-system/pkg/domain"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/config"
-	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/domain"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
