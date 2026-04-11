@@ -27,12 +27,14 @@ func (server *KMSServer) GenerateKey(ctx context.Context, req *kmsv1.GenerateKey
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
-
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is empty")
+	}
 	if req.Type == commonv1.KeyType_KEY_TYPE_UNSPECIFIED {
 		return nil, status.Error(codes.InvalidArgument, "key type has to be specified")
 	}
 
-	key, err := server.repo.GenerateKey(ctx, req.Type, time.Now().UTC())
+	key, err := server.repo.GenerateKey(ctx, req.UserId, req.Type, time.Now().UTC())
 	if err != nil {
 		return nil, errorToGRPCError(err)
 	}
@@ -46,11 +48,14 @@ func (server *KMSServer) GetKey(ctx context.Context, req *kmsv1.GetKeyRequest) (
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is empty")
+	}
 	if req.KeyId == "" {
 		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
 	}
 
-	key, err := server.repo.GetKeyOrRotateIfExpired(ctx, req.KeyId, time.Now().UTC())
+	key, err := server.repo.GetKeyOrRotateIfExpired(ctx, req.UserId, req.KeyId, time.Now().UTC())
 	if err != nil {
 		return nil, errorToGRPCError(err)
 	}
@@ -67,8 +72,11 @@ func (server *KMSServer) ListKeys(req *kmsv1.ListKeysRequest, stream grpc.Server
 	if req == nil {
 		return status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
+	if req.UserId == "" {
+		return status.Error(codes.InvalidArgument, "user id is empty")
+	}
 
-	keys, err := server.repo.ListKeys(stream.Context())
+	keys, err := server.repo.ListKeys(stream.Context(), req.UserId)
 	if err != nil {
 		return errorToGRPCError(err)
 	}
@@ -90,11 +98,14 @@ func (server *KMSServer) RotateKey(ctx context.Context, req *kmsv1.RotateKeyRequ
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is empty")
+	}
 	if req.KeyId == "" {
 		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
 	}
 
-	key, err := server.repo.RotateKey(ctx, req.KeyId, time.Now().UTC())
+	key, err := server.repo.RotateKey(ctx, req.UserId, req.KeyId, time.Now().UTC())
 	if err != nil {
 		return nil, errorToGRPCError(err)
 	}
@@ -106,11 +117,14 @@ func (server *KMSServer) DisableKey(ctx context.Context, req *kmsv1.DisableKeyRe
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is empty")
+	}
 	if req.KeyId == "" {
 		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
 	}
 
-	err := server.repo.DisableKey(ctx, req.KeyId, time.Now().UTC())
+	err := server.repo.DisableKey(ctx, req.UserId, req.KeyId, time.Now().UTC())
 	if err != nil {
 		return nil, errorToGRPCError(err)
 	}
@@ -122,11 +136,14 @@ func (server *KMSServer) DestroyKey(ctx context.Context, req *kmsv1.DestroyKeyRe
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is empty")
+	}
 	if req.KeyId == "" {
 		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
 	}
 
-	err := server.repo.DestroyKey(ctx, req.KeyId)
+	err := server.repo.DestroyKey(ctx, req.UserId, req.KeyId)
 	if err != nil {
 		return nil, errorToGRPCError(err)
 	}
@@ -138,11 +155,14 @@ func (server *KMSServer) RestoreKey(ctx context.Context, req *kmsv1.RestoreKeyRe
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request cannot be nil")
 	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is empty")
+	}
 	if req.KeyId == "" {
 		return nil, status.Error(codes.InvalidArgument, "key id has to be specified")
 	}
 
-	err := server.repo.RestoreKey(ctx, req.KeyId)
+	err := server.repo.RestoreKey(ctx, req.UserId, req.KeyId)
 	if err != nil {
 		return nil, errorToGRPCError(err)
 	}
