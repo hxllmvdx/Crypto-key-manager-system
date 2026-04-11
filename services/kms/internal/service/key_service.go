@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/kmserrors"
 	"time"
 
+	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/kmserrors"
+
+	"github.com/hxllmvdx/Crypto-key-management-system/pkg/domain"
 	commonv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/common/v1"
-	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/domain"
+
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/repository"
 
 	"crypto/rand"
@@ -33,9 +35,13 @@ func isKeyRotatable(key *domain.Key, allowedStatusesForRotation map[commonv1.Key
 	if key.ID == "" {
 		return errors.New("keyID is empty")
 	}
+	if key.UserID == "" {
+		return errors.New("userID is empty")
+	}
 	if key.KeyType() == commonv1.KeyType_KEY_TYPE_UNSPECIFIED {
 		return errors.New("key type is unspecified")
 	}
+
 	if _, ok := allowedStatusesForRotation[key.Status]; !ok {
 		return fmt.Errorf("%w: status=%s", kmserrors.ErrNotRotatable, key.Status.String())
 	}
@@ -100,6 +106,7 @@ func (s *KeyService) rotateOldKey(
 		UpdatedAt:    timeNow,
 		ExpiryAt:     timeNow.AddDate(0, 1, 0),
 		DisabledAt:   oldKey.DisabledAt,
+		UserID:       oldKey.UserID,
 	}
 
 	oldKey.Status = statusForOldKeyAfterRotation
@@ -120,7 +127,11 @@ func NewKeyService(repo repository.KeyRepository) *KeyService {
 	return &KeyService{repo: repo}
 }
 
-func (s *KeyService) GenerateKey(ctx context.Context, keyType commonv1.KeyType, timeNow time.Time) (*domain.Key, error) {
+func (s *KeyService) GenerateKey(ctx context.Context, userID string, keyType commonv1.KeyType, timeNow time.Time) (*domain.Key, error) {
+	if userID == "" {
+		return nil, errors.New("userID is empty")
+	}
+
 	keyMaterial, err := generateKeyMaterial(keyType)
 	if err != nil {
 		return nil, err
@@ -138,18 +149,22 @@ func (s *KeyService) GenerateKey(ctx context.Context, keyType commonv1.KeyType, 
 		UpdatedAt:    timeNow,
 		ExpiryAt:     timeNow.AddDate(0, 1, 0),
 		DisabledAt:   time.Time{},
+		UserID:       userID,
 	}
 
 	err = s.repo.Create(ctx, key)
 	return key, err
 }
 
-func (s *KeyService) GetKeyOrRotateIfExpired(ctx context.Context, keyID string, timeNow time.Time) (*domain.Key, error) {
+func (s *KeyService) GetKeyOrRotateIfExpired(ctx context.Context, userID, keyID string, timeNow time.Time) (*domain.Key, error) {
+	if userID == "" {
+		return nil, errors.New("userID is empty")
+	}
 	if keyID == "" {
 		return nil, fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
 	}
 
-	key, err := s.repo.GetByID(ctx, keyID)
+	key, err := s.repo.GetByID(ctx, userID, keyID)
 	if err != nil {
 		return nil, err
 	}
@@ -174,16 +189,23 @@ func (s *KeyService) GetKeyOrRotateIfExpired(ctx context.Context, keyID string, 
 	)
 }
 
-func (s *KeyService) ListKeys(ctx context.Context) ([]domain.Key, error) {
-	return s.repo.List(ctx)
+func (s *KeyService) ListKeys(ctx context.Context, userID string) ([]domain.Key, error) {
+	if userID == "" {
+		return nil, errors.New("userID is empty")
+	}
+
+	return s.repo.List(ctx, userID)
 }
 
-func (s *KeyService) RotateKey(ctx context.Context, keyID string, timeNow time.Time) (*domain.Key, error) {
+func (s *KeyService) RotateKey(ctx context.Context, userID, keyID string, timeNow time.Time) (*domain.Key, error) {
+	if userID == "" {
+		return nil, errors.New("userID is empty")
+	}
 	if keyID == "" {
 		return nil, fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
 	}
 
-	oldKey, err := s.repo.GetByID(ctx, keyID)
+	oldKey, err := s.repo.GetByID(ctx, userID, keyID)
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +221,54 @@ func (s *KeyService) RotateKey(ctx context.Context, keyID string, timeNow time.T
 		allowedStatusesForRotation,
 		timeNow,
 	)
+}
+
+func (s *KeyService) DisableKey(ctx context.Context, userID, keyID string, timeNow time.Time) error {
+	if userID == "" {
+		return errors.New("userID is empty")
+	}
+	if keyID == "" {
+		return fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
+	}
+
+	err := s.repo.Disable(ctx, userID, keyID, timeNow)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *KeyService) DestroyKey(ctx context.Context, userID, keyID string) error {
+	if userID == "" {
+		return errors.New("userID is empty")
+	}
+	if keyID == "" {
+		return fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
+	}
+
+	err := s.repo.Destroy(ctx, userID, keyID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *KeyService) RestoreKey(ctx context.Context, userID, keyID string) error {
+	if userID == "" {
+		return errors.New("userID is empty")
+	}
+	if keyID == "" {
+		return fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
+	}
+
+	err := s.repo.Restore(ctx, userID, keyID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *KeyService) RotateEnabledKeysThatExpired(ctx context.Context, timeNow time.Time) error {
@@ -230,45 +300,6 @@ func (s *KeyService) RotateEnabledKeysThatExpired(ctx context.Context, timeNow t
 
 func (s *KeyService) DestroyOldDisabledKeys(ctx context.Context, timeNow time.Time) error {
 	err := s.repo.DeleteOldDisabled(ctx, timeNow)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *KeyService) DisableKey(ctx context.Context, keyID string, timeNow time.Time) error {
-	if keyID == "" {
-		return fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
-	}
-
-	err := s.repo.Disable(ctx, keyID, timeNow)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *KeyService) DestroyKey(ctx context.Context, keyID string) error {
-	if keyID == "" {
-		return fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
-	}
-
-	err := s.repo.Destroy(ctx, keyID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *KeyService) RestoreKey(ctx context.Context, keyID string) error {
-	if keyID == "" {
-		return fmt.Errorf("%w: key id is empty", kmserrors.ErrInvalidArgument)
-	}
-
-	err := s.repo.Restore(ctx, keyID)
 	if err != nil {
 		return err
 	}

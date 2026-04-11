@@ -4,22 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/hxllmvdx/Crypto-key-management-system/pkg/domain"
 	commonv1 "github.com/hxllmvdx/Crypto-key-management-system/services/kms/gen/common/v1"
-	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/domain"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/kms/internal/kmserrors"
 	"gorm.io/gorm"
-	"time"
 )
 
 type KeyRepository interface {
+	// use in rpc
 	Create(ctx context.Context, key *domain.Key) error
-	GetByID(ctx context.Context, id string) (*domain.Key, error)
-	List(ctx context.Context) ([]domain.Key, error)
+	GetByID(ctx context.Context, userID, keyID string) (*domain.Key, error)
+	List(ctx context.Context, userID string) ([]domain.Key, error)
 	Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain.Key) error
+	Disable(ctx context.Context, userID, keyID string, timeNow time.Time) error
+	Destroy(ctx context.Context, userID, keyID string) error
+	Restore(ctx context.Context, userID, keyID string) error
+
+	// use in background handler
 	ListEnabledThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error)
-	Disable(ctx context.Context, id string, timeNow time.Time) error
-	Destroy(ctx context.Context, id string) error
-	Restore(ctx context.Context, id string) error
 	DeleteOldDisabled(ctx context.Context, timeNow time.Time) error
 }
 
@@ -35,10 +39,10 @@ func (r *KeyRepo) Create(ctx context.Context, key *domain.Key) error {
 	return r.db.WithContext(ctx).Create(key).Error
 }
 
-func (r *KeyRepo) GetByID(ctx context.Context, id string) (*domain.Key, error) {
+func (r *KeyRepo) GetByID(ctx context.Context, userID, keyID string) (*domain.Key, error) {
 	var key domain.Key
 	result := r.db.WithContext(ctx).
-		Where("id = ? AND status = ?", id, commonv1.KeyStatus_KEY_STATUS_ENABLED).
+		Where("user_id = ? and id = ? AND status = ?", userID, keyID, commonv1.KeyStatus_KEY_STATUS_ENABLED).
 		Order("version DESC").
 		First(&key)
 
@@ -52,9 +56,12 @@ func (r *KeyRepo) GetByID(ctx context.Context, id string) (*domain.Key, error) {
 	return &key, nil
 }
 
-func (r *KeyRepo) List(ctx context.Context) ([]domain.Key, error) {
+func (r *KeyRepo) List(ctx context.Context, userID string) ([]domain.Key, error) {
 	var keys []domain.Key
-	err := r.db.WithContext(ctx).Find(&keys).Error
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Find(&keys).
+		Error
 	return keys, err
 }
 
@@ -72,6 +79,30 @@ func (r *KeyRepo) Rotate(ctx context.Context, oldKey *domain.Key, newKey *domain
 	})
 }
 
+func (r *KeyRepo) Disable(ctx context.Context, userID, keyID string, timeNow time.Time) error {
+	return r.db.WithContext(ctx).
+		Where("user_id = ? AND id = ?", userID, keyID).
+		Updates(map[string]any{
+			"disabled_at": timeNow,
+		}).
+		Error
+}
+
+func (r *KeyRepo) Destroy(ctx context.Context, userID, keyID string) error {
+	return r.db.WithContext(ctx).
+		Delete(&domain.Key{}, "user_id = ? AND id = ?", userID, keyID).
+		Error
+}
+
+func (r *KeyRepo) Restore(ctx context.Context, userID, keyID string) error {
+	return r.db.WithContext(ctx).
+		Where("user_id = ? AND id = ?", userID, keyID).
+		Updates(map[string]any{
+			"disabled_at": nil,
+		}).
+		Error
+}
+
 func (r *KeyRepo) ListEnabledThatExpired(ctx context.Context, timeNow time.Time) ([]domain.Key, error) {
 	var keys []domain.Key
 	err := r.db.WithContext(ctx).
@@ -79,30 +110,6 @@ func (r *KeyRepo) ListEnabledThatExpired(ctx context.Context, timeNow time.Time)
 		Find(&keys).
 		Error
 	return keys, err
-}
-
-func (r *KeyRepo) Disable(ctx context.Context, id string, timeNow time.Time) error {
-	return r.db.WithContext(ctx).
-		Where("id = ?", id).
-		Updates(map[string]any{
-			"disabled_at": timeNow,
-		}).
-		Error
-}
-
-func (r *KeyRepo) Destroy(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).
-		Delete(&domain.Key{}, "id = ?", id).
-		Error
-}
-
-func (r *KeyRepo) Restore(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).
-		Where("id = ?", id).
-		Updates(map[string]any{
-			"disabled_at": nil,
-		}).
-		Error
 }
 
 func (r *KeyRepo) DeleteOldDisabled(ctx context.Context, timeNow time.Time) error {
