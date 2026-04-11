@@ -57,6 +57,10 @@ func (r *UserRepo) Update(ctx context.Context, login, password string) error {
 		return err
 	}
 
+	if err := user.CheckPassword(password); err != nil {
+		return err
+	}
+
 	if err := user.SetPassword(password); err != nil {
 		return err
 	}
