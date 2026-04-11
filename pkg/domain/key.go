@@ -11,7 +11,7 @@ import (
 type Key struct {
 	ID           string `gorm:"primary_key;size:36"`
 	Version      uint32 `gorm:"primary_key"`
-	OwnerID      User
+	UserID       string `gorm:"type:uuid;index;not null"`
 	Algorithm    string
 	EncryptedKey []byte
 	Status       commonv1.KeyStatus `gorm:"type:int"`
@@ -19,7 +19,6 @@ type Key struct {
 	UpdatedAt    time.Time
 	ExpiryAt     time.Time
 	DisabledAt   time.Time
-	UserID       string `gorm:"type:uuid;index;not null"`
 }
 
 func (key Key) KeyType() commonv1.KeyType {
