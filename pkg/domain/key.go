@@ -22,7 +22,11 @@ type Key struct {
 }
 
 func (key Key) KeyType() commonv1.KeyType {
-	switch key.Algorithm {
+	return StringToKeyType(key.Algorithm)
+}
+
+func StringToKeyType(keyType string) commonv1.KeyType {
+	switch keyType {
 	case "AES_128":
 		return commonv1.KeyType_KEY_TYPE_AES_128
 	case "AES_256":
