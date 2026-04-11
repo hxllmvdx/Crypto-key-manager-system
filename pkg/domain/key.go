@@ -20,7 +20,6 @@ type Key struct {
 	ExpiryAt     time.Time
 	DisabledAt   time.Time
 	UserID       string `gorm:"type:uuid;index;not null"`
-	User         User   `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 func (key Key) KeyType() commonv1.KeyType {
