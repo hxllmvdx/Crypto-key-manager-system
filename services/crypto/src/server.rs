@@ -29,7 +29,7 @@ impl CryptoService for CryptoServer {
 
         let mut kms = self.kms_client.lock().await;
 
-        let key = kms.get_key(&req.key_id).await?;
+        let key = kms.get_key(&req.key_id, &req.user_id).await?;
 
         match key.metadata.unwrap().r#type() {
             KeyType::Aes128 => {
@@ -70,7 +70,7 @@ impl CryptoService for CryptoServer {
 
         let mut kms = self.kms_client.lock().await;
 
-        let key = kms.get_key(&req.key_id).await?;
+        let key = kms.get_key(&req.key_id, &req.user_id).await?;
 
         match key.metadata.unwrap().r#type() {
             KeyType::Aes128 => {

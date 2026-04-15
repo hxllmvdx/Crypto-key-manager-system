@@ -21,7 +21,7 @@ mock! {
     pub KMSClient {}
     #[async_trait]
     impl KMSClientTrait for KMSClient {
-        async fn get_key(&mut self, key_id: &str) -> Result<Key, ServiceError>;
+        async fn get_key(&mut self, key_id: &str, user_id: &str) -> Result<Key, ServiceError>;
     }
 }
 
@@ -69,6 +69,7 @@ fn generate_rsa_private_key() -> Vec<u8> {
 #[tokio::test]
 async fn test_encrypt_aes128_success() {
     let key_id = "key-aes128".to_string();
+    let user_id = "".to_string();
     let key_material = vec![0x01; 16];
     let plaintext = b"Hello, AES-128!".to_vec();
 
@@ -83,15 +84,16 @@ async fn test_encrypt_aes128_success() {
 
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(move |_| Ok(key));
+        .return_once(move |_, _| Ok(key.clone()));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = EncryptRequest {
         key_id,
+        user_id,
         plaintext: plaintext.clone(),
     };
     let response = client.encrypt(Request::new(request)).await.unwrap();
@@ -111,6 +113,7 @@ async fn test_encrypt_aes128_success() {
 #[tokio::test]
 async fn test_encrypt_aes256_success() {
     let key_id = "key-aes256".to_string();
+    let user_id = "".to_string();
     let key_material = vec![0x02; 32];
     let plaintext = b"Hello, AES-256!".to_vec();
 
@@ -125,15 +128,16 @@ async fn test_encrypt_aes256_success() {
 
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(move |_| Ok(key));
+        .return_once(move |_, _| Ok(key));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = EncryptRequest {
         key_id,
+        user_id,
         plaintext: plaintext.clone(),
     };
     let response = client.encrypt(Request::new(request)).await.unwrap();
@@ -153,6 +157,7 @@ async fn test_encrypt_aes256_success() {
 #[tokio::test]
 async fn test_encrypt_rsa2048_success() {
     let key_id = "key-rsa".to_string();
+    let user_id = "".to_string();
     let key_material = generate_rsa_private_key();
     let plaintext = b"RSA test".to_vec();
 
@@ -167,15 +172,16 @@ async fn test_encrypt_rsa2048_success() {
 
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(move |_| Ok(key));
+        .return_once(move |_, _| Ok(key.clone()));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = EncryptRequest {
         key_id,
+        user_id,
         plaintext: plaintext.clone(),
     };
     let response = client.encrypt(Request::new(request)).await.unwrap();
@@ -193,17 +199,19 @@ async fn test_encrypt_rsa2048_success() {
 #[tokio::test]
 async fn test_encrypt_key_not_found() {
     let key_id = "unknown".to_string();
+    let user_id = "".to_string();
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(|_| Err(ServiceError::KMSClientError("Key not found".to_string())));
+        .return_once(|_, _| Err(ServiceError::KMSClientError("Key not found".to_string())));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = EncryptRequest {
         key_id,
+        user_id,
         plaintext: b"data".to_vec(),
     };
     let result = client.encrypt(Request::new(request)).await;
@@ -217,6 +225,7 @@ async fn test_encrypt_key_not_found() {
 #[tokio::test]
 async fn test_encrypt_unspecified_key_type() {
     let key_id = "bad-key".to_string();
+    let user_id = "".to_string();
     let key = Key {
         key_material: vec![],
         metadata: Some(KeyMetadata {
@@ -227,15 +236,16 @@ async fn test_encrypt_unspecified_key_type() {
     };
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(move |_| Ok(key));
+        .return_once(move |_, _| Ok(key));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = EncryptRequest {
         key_id,
+        user_id,
         plaintext: b"data".to_vec(),
     };
     let result = client.encrypt(Request::new(request)).await;
@@ -249,6 +259,7 @@ async fn test_encrypt_unspecified_key_type() {
 #[tokio::test]
 async fn test_decrypt_aes128_success() {
     let key_id = "key-aes128".to_string();
+    let user_id = "".to_string();
     let key_material = vec![0x03; 16];
     let plaintext = b"Decrypt me!".to_vec();
 
@@ -265,15 +276,16 @@ async fn test_decrypt_aes128_success() {
 
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(move |_| Ok(key));
+        .return_once(move |_, _| Ok(key));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = DecryptRequest {
         key_id,
+        user_id,
         ciphertext,
         nonce_bytes: nonce,
     };
@@ -287,6 +299,7 @@ async fn test_decrypt_aes128_success() {
 #[tokio::test]
 async fn test_decrypt_aes256_success() {
     let key_id = "key-aes256".to_string();
+    let user_id = "".to_string();
     let key_material = vec![0x04; 32];
     let plaintext = b"Another secret".to_vec();
 
@@ -303,15 +316,16 @@ async fn test_decrypt_aes256_success() {
 
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(move |_| Ok(key));
+        .return_once(move |_, _| Ok(key));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = DecryptRequest {
         key_id,
+        user_id,
         ciphertext,
         nonce_bytes: nonce,
     };
@@ -325,6 +339,7 @@ async fn test_decrypt_aes256_success() {
 #[tokio::test]
 async fn test_decrypt_rsa2048_success() {
     let key_id = "key-rsa".to_string();
+    let user_id = "".to_string();
     let key_material = generate_rsa_private_key();
     let plaintext = b"RSA secret".to_vec();
 
@@ -341,15 +356,16 @@ async fn test_decrypt_rsa2048_success() {
 
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(move |_| Ok(key));
+        .return_once(move |_, _| Ok(key));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = DecryptRequest {
         key_id,
+        user_id,
         ciphertext,
         nonce_bytes: vec![],
     };
@@ -363,17 +379,19 @@ async fn test_decrypt_rsa2048_success() {
 #[tokio::test]
 async fn test_decrypt_key_not_found() {
     let key_id = "unknown".to_string();
+    let user_id = "".to_string();
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(|_| Err(ServiceError::KMSClientError("Key not found".to_string())));
+        .return_once(|_, _| Err(ServiceError::KMSClientError("Key not found".to_string())));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = DecryptRequest {
         key_id,
+        user_id,
         ciphertext: vec![1, 2, 3],
         nonce_bytes: vec![4, 5, 6],
     };
@@ -388,6 +406,7 @@ async fn test_decrypt_key_not_found() {
 #[tokio::test]
 async fn test_decrypt_unspecified_key_type() {
     let key_id = "bad-key".to_string();
+    let user_id = "".to_string();
     let key = Key {
         key_material: vec![],
         metadata: Some(KeyMetadata {
@@ -398,15 +417,16 @@ async fn test_decrypt_unspecified_key_type() {
     };
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(move |_| Ok(key));
+        .return_once(move |_, _| Ok(key));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = DecryptRequest {
         key_id,
+        user_id,
         ciphertext: vec![1, 2, 3],
         nonce_bytes: vec![4, 5, 6],
     };
@@ -421,6 +441,7 @@ async fn test_decrypt_unspecified_key_type() {
 #[tokio::test]
 async fn test_decrypt_wrong_nonce() {
     let key_id = "key-aes128".to_string();
+    let user_id = "".to_string();
     let key_material = vec![0x05; 16];
     let plaintext = b"Data".to_vec();
 
@@ -438,15 +459,16 @@ async fn test_decrypt_wrong_nonce() {
 
     let mut mock = MockKMSClient::new();
     mock.expect_get_key()
-        .with(eq(key_id.clone()))
+        .with(eq(key_id.clone()), eq(user_id.clone()))
         .times(1)
-        .return_once(move |_| Ok(key));
+        .return_once(move |_, _| Ok(key));
 
     let server = create_test_server(mock);
     let (mut client, server_task) = run_test_server(server).await;
 
     let request = DecryptRequest {
         key_id,
+        user_id,
         ciphertext,
         nonce_bytes: wrong_nonce,
     };
