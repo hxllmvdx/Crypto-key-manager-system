@@ -3,18 +3,10 @@ package service
 import (
 	"context"
 
-	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/repository"
+	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/client"
 )
 
-type AuthResult struct {
-	AccessToken  string
-	RefreshToken string
-}
-
-type GatewayService interface {
-	UserLogin(ctx context.Context, userName, password string) (AuthResult, error)
-	UserRegister(ctx context.Context, userName, password string) (AuthResult, error)
-	UserRefresh(ctx context.Context, refreshToken string) (AuthResult, error)
+type ApiService interface {
 	ListKeys(ctx context.Context, userId string) ([]string, error)
 	GetKey(ctx context.Context, keyId, userId string) ([]byte, error)
 	CreateKey(ctx context.Context, userId string) (string, error)
@@ -26,12 +18,14 @@ type GatewayService interface {
 	Decrypt(ctx context.Context, keyId, userId string, ciphertext, nonceBytes []byte) ([]byte, error)
 }
 
-type gatewayService struct {
-	repo *repository.UserRepository
+type apiService struct {
+	kmsClient    *client.KMSClient
+	cryptoClient *client.CryptoClient
 }
 
-func NewGatewayService(repo *repository.UserRepository) GatewayService {
-	return &gatewayService{
-		repo: repo,
+func NewApiService(kmsClient *client.KMSClient, cryptoClient *client.CryptoClient) ApiService {
+	return &apiService{
+		kmsClient:    kmsClient,
+		cryptoClient: cryptoClient,
 	}
 }
