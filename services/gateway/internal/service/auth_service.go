@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/repository"
+	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/session"
 )
 
 type AuthResult struct {
@@ -18,11 +19,13 @@ type AuthService interface {
 }
 
 type authService struct {
-	repo *repository.UserRepository
+	repo         *repository.UserRepository
+	sessionStore *session.SessionStore
 }
 
-func NewAuthService(repo *repository.UserRepository) AuthService {
+func NewAuthService(repo *repository.UserRepository, sessionStore *session.SessionStore) AuthService {
 	return &authService{
-		repo: repo,
+		repo:         repo,
+		sessionStore: sessionStore,
 	}
 }
