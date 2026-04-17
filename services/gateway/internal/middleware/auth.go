@@ -25,9 +25,10 @@ func AuthMiddleware(m jwtManager.TokenManager) gin.HandlerFunc {
 		claims, err := m.ParseAccessToken(tokenString)
 		if err != nil {
 			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token"})
+			return
 		}
 
-		c.Set("claims", claims)
+		c.Set("user_id", claims.Subject)
 		c.Next()
 	}
 }
