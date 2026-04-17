@@ -2,11 +2,10 @@ package session
 
 import (
 	"context"
-	"time"
 )
 
 type SessionStore interface {
-	SaveRefreshToken(ctx context.Context, userID int64, token string, ttl time.Duration) error
-	GetRefreshToken(ctx context.Context, token string) (int64, error)
+	SaveRefreshToken(ctx context.Context, userID string, token string) error
+	GetRefreshToken(ctx context.Context, token string) (string, error)
 	DeleteRefreshToken(ctx context.Context, token string) error
 }
