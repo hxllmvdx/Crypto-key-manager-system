@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -42,7 +43,9 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		c.Set("user_id", userID)
+		ctx := context.WithValue(c.Request.Context(), "user_id", userID)
+		c.Request = c.Request.WithContext(ctx)
+
 		c.Next()
 	}
 }
