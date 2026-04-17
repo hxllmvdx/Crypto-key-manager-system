@@ -58,3 +58,30 @@ func (s *apiService) Decrypt(ctx context.Context, keyId string, ciphertext, nonc
 
 	return plaintext, nil
 }
+
+func (s *apiService) RestoreKey(ctx context.Context, keyId string) error {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return errors.New("user_id not found in context")
+	}
+
+	return s.kmsClient.RestoreKey(ctx, userID, keyId)
+}
+
+func (s *apiService) DisableKey(ctx context.Context, keyId string) error {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return errors.New("user_id not found in context")
+	}
+
+	return s.kmsClient.DisableKey(ctx, userID, keyId)
+}
+
+func (s *apiService) DestroyKey(ctx context.Context, keyId string) error {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return errors.New("user_id not found in context")
+	}
+
+	return s.kmsClient.DestroyKey(ctx, userID, keyId)
+}
