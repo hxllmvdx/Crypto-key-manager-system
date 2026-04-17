@@ -14,6 +14,7 @@ type Config struct {
 	DBName     string
 
 	GatewayPort string
+	JWTIssuer   string
 	JWTSecret   string
 	KMSAddr     string
 	CryptoAddr  string
@@ -30,12 +31,14 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &Config{
-		DBHost:      getEnv("DB_HOST", "localhost"),
-		DBPort:      port,
-		DBUser:      getEnv("DB_USER", "postgres"),
-		DBPassword:  getEnv("DB_PASSWORD", "postgres"),
-		DBName:      getEnv("DB_NAME", "kms"),
+		DBHost:     getEnv("DB_HOST", "localhost"),
+		DBPort:     port,
+		DBUser:     getEnv("DB_USER", "postgres"),
+		DBPassword: getEnv("DB_PASSWORD", "postgres"),
+		DBName:     getEnv("DB_NAME", "kms"),
+
 		GatewayPort: getEnv("GATEWAY_PORT", "8080"),
+		JWTIssuer:   getEnv("JWT_ISSUER", "kms-gateway"),
 		JWTSecret: getEnv("JWT_SECRET", `cLHZ5hULGF6ZTiYpPUKW3b0rs9pD2Yom6cDIE8IbCA6hkmdp4dzOTfKKZYMFTKLy
 			jeeEUKeqv1ZRRx2rm4c/cQ==`),
 		KMSAddr:    getEnv("KMS_ADDR", "localhost:50051"),

@@ -10,7 +10,7 @@ import (
 type ApiService interface {
 	ListKeys(ctx context.Context) ([]string, error)
 	GetKey(ctx context.Context, keyId string) ([]byte, error)
-	CreateKey(ctx context.Context) (string, error)
+	CreateKey(ctx context.Context, keyType string) (string, error)
 	RotateKey(ctx context.Context, keyId string) (string, error)
 	RestoreKey(ctx context.Context, keyId string) error
 	DisableKey(ctx context.Context, keyId string) error
@@ -29,6 +29,42 @@ func NewApiService(kmsClient *client.KMSClient, cryptoClient *client.CryptoClien
 		kmsClient:    kmsClient,
 		cryptoClient: cryptoClient,
 	}
+}
+
+func (s *apiService) ListKeys(ctx context.Context) ([]string, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return nil, errors.New("user_id not found in context")
+	}
+
+	return s.kmsClient.ListKeys(ctx, userID)
+}
+
+func (s *apiService) GetKey(ctx context.Context, keyId string) ([]byte, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return nil, errors.New("user_id not found in context")
+	}
+
+	return s.kmsClient.GetKey(ctx, userID, keyId)
+}
+
+func (s *apiService) CreateKey(ctx context.Context, keyType string) (string, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return "", errors.New("user_id not found in context")
+	}
+
+	return s.kmsClient.GenerateKey(ctx, userID, keyType)
+}
+
+func (s *apiService) RotateKey(ctx context.Context, keyID string) (string, error) {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return "", errors.New("user_id not found in context")
+	}
+
+	return s.kmsClient.RotateKey(ctx, userID, keyID)
 }
 
 func (s *apiService) Encrypt(ctx context.Context, keyId string, plaintext []byte) ([]byte, []byte, error) {

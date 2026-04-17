@@ -66,7 +66,7 @@ func (s *store) GetRefreshToken(ctx context.Context, token string) (string, erro
 		return "", ErrTokenNotFound
 	}
 	if err != nil {
-		return "", fmt.Errorf("failed to save token: %w", err)
+		return "", fmt.Errorf("failed to get token: %w", err)
 	}
 
 	return val, nil
