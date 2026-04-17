@@ -1,7 +1,9 @@
 package main
 
 import (
+	jwtManager "github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/jwt"
 	"log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/client"
@@ -27,7 +29,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("crypto client init: %v", err)
 	}
-	defer cryptoConn.Close()
+	defer func(cryptoConn *grpc.ClientConn) {
+		err := cryptoConn.Close()
+		if err != nil {
+			log.Fatalf("crypto client init: %v", err)
+		}
+	}(cryptoConn)
 
 	cryptoClient := client.NewCryptoClient(cryptoConn, 10)
 
@@ -37,6 +44,12 @@ func main() {
 	routes.AuthRoutes(authGroup)
 
 	apiGroup := router.Group("/api")
-	apiGroup.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+
+	tokenManager, err := jwtManager.NewTokenManager(cfg.JWTSecret, cfg.JWTIssuer, 15*time.Minute, 24*time.Hour, 5*time.Second)
+	if err != nil {
+		log.Fatalf("token manager init: %v", err)
+	}
+
+	apiGroup.Use(middleware.AuthMiddleware(tokenManager))
 	routes.ApiRoutes(apiGroup)
 }

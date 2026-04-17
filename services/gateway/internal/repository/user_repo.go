@@ -69,7 +69,7 @@ func (r *userRepo) Update(ctx context.Context, login, password string) error {
 	return r.db.WithContext(ctx).
 		Model(&domain.User{}).
 		Where("id = ?", user.ID).
-		Update("password", user.PasswordHash).
+		Update("password_hash", user.PasswordHash).
 		Error
 }
 

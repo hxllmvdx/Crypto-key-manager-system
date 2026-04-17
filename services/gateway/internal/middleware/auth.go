@@ -1,15 +1,13 @@
 package middleware
 
 import (
-	"context"
-	"fmt"
+	jwtManager "github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/jwt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
+func AuthMiddleware(m jwtManager.TokenManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
 		if header == "" {
@@ -22,30 +20,14 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 			return
 		}
 
-		keyFunc := func(token *jwt.Token) (any, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			return []byte(jwtSecret), nil
-		}
-
 		tokenString := strings.TrimPrefix(header, "Bearer ")
-		claims := &jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, keyFunc)
-		if err != nil || !token.Valid {
+
+		claims, err := m.ParseAccessToken(tokenString)
+		if err != nil {
 			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token"})
-			return
 		}
 
-		userID, ok := (*claims)["user_id"].(string)
-		if !ok {
-			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token claims"})
-			return
-		}
-
-		ctx := context.WithValue(c.Request.Context(), "user_id", userID)
-		c.Request = c.Request.WithContext(ctx)
-
+		c.Set("claims", claims)
 		c.Next()
 	}
 }
