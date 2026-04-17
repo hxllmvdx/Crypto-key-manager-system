@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -20,13 +21,15 @@ type store struct {
 	timeout time.Duration
 }
 
-func NewStore(addr string, timeout time.Duration) (SessionStore, error) {
+func NewStore(cfg *config.Config, timeout time.Duration) (SessionStore, error) {
 	if timeout <= 0 {
 		return nil, errors.New("timeout must be positive")
 	}
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr: addr,
+		Addr:     cfg.RedisAddr,
+		Password: cfg.RedisPassword,
+		DB:       cfg.RedisDB,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

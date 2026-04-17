@@ -7,15 +7,20 @@ import (
 )
 
 type Config struct {
-	DBHost      string
-	DBPort      int
-	DBUser      string
-	DBPassword  string
-	DBName      string
+	DBHost     string
+	DBPort     int
+	DBUser     string
+	DBPassword string
+	DBName     string
+
 	GatewayPort string
 	JWTSecret   string
 	KMSAddr     string
 	CryptoAddr  string
+
+	RedisAddr     string
+	RedisPassword string
+	RedisDB       int
 }
 
 func LoadConfig() (*Config, error) {
