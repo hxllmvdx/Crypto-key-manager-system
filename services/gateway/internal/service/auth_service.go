@@ -48,6 +48,10 @@ func (s *authService) UserLogin(ctx context.Context, username, password string, 
 		return AuthResult{}, err
 	}
 
+	if err := user.CheckPassword(password); err != nil {
+		return AuthResult{}, errors.New("invalid credentials")
+	}
+
 	tokenAccessString, err := s.tokenManager.GenerateAccessToken(user.ID, timeNow)
 	if err != nil {
 		return AuthResult{}, err
