@@ -103,3 +103,45 @@ func (s *authService) UserRegister(ctx context.Context, username, password strin
 		RefreshToken: tokenRefreshString,
 	}, nil
 }
+
+func (s *authService) UserRefresh(ctx context.Context, refreshToken string, timeNow time.Time) (AuthResult, error) {
+	if refreshToken == "" {
+		return AuthResult{}, errors.New("invalid refresh token")
+	}
+
+	userID, err := s.sessionStore.GetUserIDByRefreshToken(ctx, refreshToken)
+	if err != nil {
+		if errors.Is(err, session.ErrTokenNotFound) {
+			return AuthResult{}, errors.New("invalid refresh token")
+		}
+		return AuthResult{}, err
+	}
+
+	_, err = s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return AuthResult{}, err
+	}
+
+	newJWTToken, err := s.tokenManager.GenerateAccessToken(userID, timeNow)
+	if err != nil {
+		return AuthResult{}, err
+	}
+
+	newRefreshToken, err := s.tokenManager.GenerateRefreshToken(userID, timeNow)
+	if err != nil {
+		return AuthResult{}, err
+	}
+
+	if err := s.sessionStore.DeleteRefreshToken(ctx, refreshToken); err != nil {
+		return AuthResult{}, err
+	}
+
+	if err := s.sessionStore.SaveRefreshToken(ctx, userID, newRefreshToken); err != nil {
+		return AuthResult{}, err
+	}
+
+	return AuthResult{
+		AccessToken:  newJWTToken,
+		RefreshToken: newRefreshToken,
+	}, nil
+}
