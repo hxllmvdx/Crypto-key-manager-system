@@ -114,7 +114,7 @@ func (r *KeyRepo) ListEnabledThatExpired(ctx context.Context, timeNow time.Time)
 
 func (r *KeyRepo) DeleteOldDisabled(ctx context.Context, timeNow time.Time) error {
 	return r.db.WithContext(ctx).
-		Delete(&domain.Key{}, "status = ? AND disabled_at is not NULL AND disabled_at >= ?",
+		Delete(&domain.Key{}, "status = ? AND disabled_at is not NULL AND disabled_at <= ?",
 			commonv1.KeyStatus_KEY_STATUS_DISABLED,
 			timeNow.AddDate(0, -1, 0)).
 		Error
