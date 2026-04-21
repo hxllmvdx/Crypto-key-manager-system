@@ -56,7 +56,7 @@ func (s *store) SaveRefreshToken(ctx context.Context, userID string, token strin
 	return s.redisDB.Set(ctx, key(token), userID, s.timeout).Err()
 }
 
-func (s *store) GetRefreshToken(ctx context.Context, token string) (string, error) {
+func (s *store) GetUserIDByRefreshToken(ctx context.Context, token string) (string, error) {
 	if token == "" {
 		return "", errors.New("token is empty")
 	}

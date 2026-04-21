@@ -6,6 +6,7 @@ import (
 	jwtManager "github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/jwt"
 	"time"
 
+	jwtManager "github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/jwt"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/repository"
 	"github.com/hxllmvdx/Crypto-key-management-system/services/gateway/internal/session"
 )
@@ -16,8 +17,8 @@ type AuthResult struct {
 }
 
 type AuthService interface {
-	UserLogin(ctx context.Context, username, password string, timeNow time.Time) (AuthResult, error)
-	UserRegister(ctx context.Context, username, password string, timeNow time.Time) (AuthResult, error)
+	UserLogin(ctx context.Context, userName, password string, timeNow time.Time) (AuthResult, error)
+	UserRegister(ctx context.Context, userName, password string, timeNow time.Time) (AuthResult, error)
 	UserRefresh(ctx context.Context, refreshToken string, timeNow time.Time) (AuthResult, error)
 }
 
