@@ -13,6 +13,7 @@ import (
 type UserRepository interface {
 	Create(ctx context.Context, login, password string) error
 	GetByLogin(ctx context.Context, login string) (*domain.User, error)
+	GetByID(ctx context.Context, id string) (*domain.User, error)
 	Update(ctx context.Context, login, password string) error
 	Delete(ctx context.Context, login string) error
 }
@@ -45,6 +46,22 @@ func (r *userRepo) GetByLogin(ctx context.Context, login string) (*domain.User, 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("get user by login: %w", usererrors.ErrNotFound)
+		}
+		return nil, result.Error
+	}
+
+	return &user, nil
+}
+
+func (r *userRepo) GetByID(ctx context.Context, userID string) (*domain.User, error) {
+	var user domain.User
+	result := r.db.WithContext(ctx).
+		Where("id = ?", userID).
+		First(&user)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("get user by id: %w", usererrors.ErrNotFound)
 		}
 		return nil, result.Error
 	}
